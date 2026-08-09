@@ -19,6 +19,7 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRow["role"]>("VIEWER");
   const [saving, setSaving] = useState(false);
+  const [resetPasswordById, setResetPasswordById] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setUsers(initialUsers);
@@ -51,7 +52,10 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
     }
   }
 
-  async function updateUser(id: string, patch: Partial<Pick<UserRow, "role" | "active" | "name">>) {
+  async function updateUser(
+    id: string,
+    patch: Partial<Pick<UserRow, "role" | "active" | "name" | "email">> & { password?: string }
+  ) {
     try {
       const res = await fetch(`/api/users/${id}`, {
         method: "PATCH",
@@ -64,7 +68,16 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
       }
       const updated = (await res.json()) as UserRow;
       setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updated } : u)));
-      toast.success("User updated");
+      if (patch.password) {
+        setResetPasswordById((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        toast.success("Password updated");
+      } else {
+        toast.success("User updated");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update user");
     }
@@ -125,13 +138,26 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
               <th className="px-3 py-2">Email</th>
               <th className="px-3 py-2">Role</th>
               <th className="px-3 py-2">Active</th>
+              <th className="px-3 py-2">Reset password</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
               <tr key={u.id} className="border-t border-[#eee]">
                 <td className="px-3 py-2 font-medium text-[var(--navy)]">{u.name}</td>
-                <td className="px-3 py-2">{u.email}</td>
+                <td className="px-3 py-2">
+                  <input
+                    type="email"
+                    className="w-full min-w-[12rem] rounded border border-[#ccc] bg-white px-2 py-1"
+                    defaultValue={u.email}
+                    onBlur={(e) => {
+                      const next = e.target.value.trim().toLowerCase();
+                      if (next && next !== u.email) {
+                        void updateUser(u.id, { email: next });
+                      }
+                    }}
+                  />
+                </td>
                 <td className="px-3 py-2">
                   <select
                     className="rounded border border-[#ccc] bg-white px-2 py-1"
@@ -151,6 +177,29 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
                     checked={u.active}
                     onChange={(e) => void updateUser(u.id, { active: e.target.checked })}
                   />
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex min-w-[14rem] items-center gap-2">
+                    <input
+                      type="password"
+                      placeholder="New password"
+                      className="w-full rounded border border-[#ccc] bg-white px-2 py-1"
+                      value={resetPasswordById[u.id] ?? ""}
+                      onChange={(e) =>
+                        setResetPasswordById((prev) => ({ ...prev, [u.id]: e.target.value }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-md bg-[var(--navy)] px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
+                      disabled={!resetPasswordById[u.id] || resetPasswordById[u.id].length < 8}
+                      onClick={() =>
+                        void updateUser(u.id, { password: resetPasswordById[u.id] })
+                      }
+                    >
+                      Save
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
