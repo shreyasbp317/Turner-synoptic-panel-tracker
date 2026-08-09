@@ -1,11 +1,11 @@
-import { isErrorResponse, jsonError, requireApiRole } from "@/lib/api";
+import { isErrorResponse, jsonError, requireApiUser } from "@/lib/api";
 import { exportFloorPlanCsv } from "@/lib/services/export";
 
 export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const user = await requireApiRole(["ADMIN", "EDITOR"]);
+  const user = await requireApiUser();
   if (isErrorResponse(user)) return user;
 
   try {

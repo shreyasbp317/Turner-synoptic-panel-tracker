@@ -12,26 +12,30 @@ export interface AuthProvider {
   getUserById(id: string): Promise<SessionUser | null>;
 }
 
-export function canEditStatus(role: UserRole): boolean {
-  return role === "ADMIN" || role === "EDITOR";
+/**
+ * All invited/authenticated users have full access (upload, status edits,
+ * mapping, export, user admin). Role enum is kept for DB compatibility only.
+ */
+export function canEditStatus(_role?: UserRole): boolean {
+  return true;
 }
 
-export function canUpload(role: UserRole): boolean {
-  return role === "ADMIN";
+export function canUpload(_role?: UserRole): boolean {
+  return true;
 }
 
-export function canManageUsers(role: UserRole): boolean {
-  return role === "ADMIN";
+export function canManageUsers(_role?: UserRole): boolean {
+  return true;
 }
 
-export function canMapEquipment(role: UserRole): boolean {
-  return role === "ADMIN";
+export function canMapEquipment(_role?: UserRole): boolean {
+  return true;
 }
 
-export function canExport(role: UserRole): boolean {
-  return role === "ADMIN" || role === "EDITOR";
+export function canExport(_role?: UserRole): boolean {
+  return true;
 }
 
-export function canEditStatusSets(role: UserRole): boolean {
-  return role === "ADMIN";
+export function canEditStatusSets(_role?: UserRole): boolean {
+  return true;
 }

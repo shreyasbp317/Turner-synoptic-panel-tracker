@@ -17,7 +17,6 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRow["role"]>("VIEWER");
   const [saving, setSaving] = useState(false);
   const [resetPasswordById, setResetPasswordById] = useState<Record<string, string>>({});
 
@@ -32,7 +31,7 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ name, email, password, role: "ADMIN" }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -43,7 +42,6 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
       setName("");
       setEmail("");
       setPassword("");
-      setRole("VIEWER");
       toast.success("User created");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create user");
@@ -54,7 +52,7 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
 
   async function updateUser(
     id: string,
-    patch: Partial<Pick<UserRow, "role" | "active" | "name" | "email">> & { password?: string }
+    patch: Partial<Pick<UserRow, "active" | "name" | "email">> & { password?: string }
   ) {
     try {
       const res = await fetch(`/api/users/${id}`, {
@@ -85,9 +83,14 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-[#555]">
+        Everyone with a login can upload floor plans and update equipment status. Invite only
+        people who should have full access.
+      </p>
+
       <form
         onSubmit={createUser}
-        className="grid gap-3 rounded-xl bg-[var(--card-bg)] p-4 sm:grid-cols-2 lg:grid-cols-5"
+        className="grid gap-3 rounded-xl bg-[var(--card-bg)] p-4 sm:grid-cols-2 lg:grid-cols-4"
       >
         <input
           required
@@ -112,15 +115,6 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <select
-          className="rounded-md border border-[#ccc] bg-white px-3 py-2 text-sm"
-          value={role}
-          onChange={(e) => setRole(e.target.value as UserRow["role"])}
-        >
-          <option value="VIEWER">VIEWER</option>
-          <option value="EDITOR">EDITOR</option>
-          <option value="ADMIN">ADMIN</option>
-        </select>
         <button
           type="submit"
           disabled={saving}
@@ -136,7 +130,6 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
             <tr>
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Email</th>
-              <th className="px-3 py-2">Role</th>
               <th className="px-3 py-2">Active</th>
               <th className="px-3 py-2">Reset password</th>
             </tr>
@@ -157,19 +150,6 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: UserRow[] }) 
                       }
                     }}
                   />
-                </td>
-                <td className="px-3 py-2">
-                  <select
-                    className="rounded border border-[#ccc] bg-white px-2 py-1"
-                    value={u.role}
-                    onChange={(e) =>
-                      void updateUser(u.id, { role: e.target.value as UserRow["role"] })
-                    }
-                  >
-                    <option value="VIEWER">VIEWER</option>
-                    <option value="EDITOR">EDITOR</option>
-                    <option value="ADMIN">ADMIN</option>
-                  </select>
                 </td>
                 <td className="px-3 py-2">
                   <input

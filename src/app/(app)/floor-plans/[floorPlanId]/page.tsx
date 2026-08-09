@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { FloorPlanViewer } from "@/components/FloorPlanViewer";
 import { requireUser } from "@/lib/auth/session";
-import { canEditStatus, canExport, canMapEquipment } from "@/lib/auth/types";
 import { getFloorPlanViewerData } from "@/lib/floor-plan-view";
 import { formatScopeSubtitle, formatZoneTabLabel } from "@/lib/labels";
 
@@ -48,9 +47,9 @@ export default async function FloorPlanPage({
       statusOptions={statusOptions}
       sourceFileLastUpdated={floorPlan.sourceFileLastUpdated}
       lastRefreshAt={floorPlan.lastRefreshAt}
-      canEdit={canEditStatus(user.role)}
-      canMap={canMapEquipment(user.role)}
-      canExport={canExport(user.role)}
+      canEdit
+      canMap
+      canExport
     />
   );
 }

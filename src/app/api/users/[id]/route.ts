@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
-import { isErrorResponse, jsonError, requireApiRole } from "@/lib/api";
+import { isErrorResponse, jsonError, requireApiUser } from "@/lib/api";
 import { prisma } from "@/lib/db";
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const actor = await requireApiRole(["ADMIN"]);
+  const actor = await requireApiUser();
   if (isErrorResponse(actor)) return actor;
 
   try {
@@ -16,14 +16,9 @@ export async function PATCH(
     const body = (await request.json()) as {
       name?: string;
       email?: string;
-      role?: UserRole;
       active?: boolean;
       password?: string;
     };
-
-    if (body.role && !Object.values(UserRole).includes(body.role)) {
-      return jsonError("Invalid role.");
-    }
 
     if (id === actor.id && body.active === false) {
       return jsonError("You cannot deactivate your own account.");
@@ -42,8 +37,8 @@ export async function PATCH(
     } = {
       ...(body.name != null ? { name: body.name } : {}),
       ...(body.email != null ? { email: body.email.toLowerCase().trim() } : {}),
-      ...(body.role != null ? { role: body.role } : {}),
       ...(body.active != null ? { active: body.active } : {}),
+      role: UserRole.ADMIN,
     };
 
     if (body.password) {

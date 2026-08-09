@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { MappingScreen } from "@/components/MappingScreen";
-import { requireRole } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/session";
 import { getFloorPlanViewerData } from "@/lib/floor-plan-view";
 import { formatScopeSubtitle } from "@/lib/labels";
 
@@ -11,7 +11,7 @@ export default async function FloorPlanMapPage({
 }: {
   params: Promise<{ floorPlanId: string }>;
 }) {
-  const user = await requireRole(["ADMIN"]);
+  const user = await requireUser();
   const { floorPlanId } = await params;
   const data = await getFloorPlanViewerData(floorPlanId);
   if (!data) notFound();

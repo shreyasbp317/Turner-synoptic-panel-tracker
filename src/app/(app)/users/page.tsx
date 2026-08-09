@@ -1,10 +1,10 @@
 import { AppHeader } from "@/components/AppHeader";
 import { UsersAdminClient } from "@/components/UsersAdminClient";
-import { requireRole } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 
 export default async function UsersPage() {
-  const user = await requireRole(["ADMIN"]);
+  const user = await requireUser();
   const users = await prisma.user.findMany({
     orderBy: { name: "asc" },
     select: {

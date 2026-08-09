@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { isErrorResponse, jsonError, requireApiRole } from "@/lib/api";
+import { isErrorResponse, jsonError, requireApiUser } from "@/lib/api";
 import { uploadFloorPlan } from "@/lib/services/floor-plans";
 
 export async function POST(request: Request) {
-  const user = await requireApiRole(["ADMIN"]);
+  const user = await requireApiUser();
   if (isErrorResponse(user)) return user;
 
   try {

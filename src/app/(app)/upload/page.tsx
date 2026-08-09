@@ -1,11 +1,11 @@
 import { AppHeader } from "@/components/AppHeader";
 import { UploadPageClient } from "@/components/UploadPageClient";
-import { requireRole } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { systemHasZones } from "@/lib/services/floor-plans";
 
 export default async function UploadPage() {
-  const user = await requireRole(["ADMIN"]);
+  const user = await requireUser();
 
   const buildings = await prisma.building.findMany({
     orderBy: { sortOrder: "asc" },

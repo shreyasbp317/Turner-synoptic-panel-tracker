@@ -41,8 +41,7 @@ Assumptions and choices made where the build prompt left room for judgment.
 
 ## Auth / roles
 
-- Invite-only: no public registration. Initial ADMIN is seeded from `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` env vars.
-- `proxy.ts` (Next.js 16) blocks unauthenticated access except `/login` and `/api/auth/login`. Role checks are enforced again in pages and API routes (VIEWER cannot mutate via direct URL).
+- Invite-only access: every invited user has full app access (upload, status, mapping, export, users). EDITOR/VIEWER labels are no longer used in the UI.
 - Floor plan backgrounds are served from `/api/floor-plans/[id]/background` and fetched client-side so multi‑MB Synoptic SVGs are not inlined into page HTML.
 - **Hosting target:** Oracle Cloud Always Free (Docker Compose; see `DEPLOY-ORACLE.md`). Railway remains available as a paid alternative (`DEPLOY-RAILWAY.md`).
 

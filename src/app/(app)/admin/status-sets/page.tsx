@@ -1,10 +1,10 @@
 import { AppHeader } from "@/components/AppHeader";
 import { StatusSetsAdminClient } from "@/components/StatusSetsAdminClient";
-import { requireRole } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 
 export default async function StatusSetsPage() {
-  const user = await requireRole(["ADMIN"]);
+  const user = await requireUser();
   const sets = await prisma.statusSet.findMany({
     orderBy: { key: "asc" },
     include: {

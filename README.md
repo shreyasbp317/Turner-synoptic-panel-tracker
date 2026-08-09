@@ -49,13 +49,9 @@ Copy `.env.example` to `.env` and set:
 4. Open the floor plan, right-click / press-and-hold equipment to change status (EDITOR/ADMIN).
 5. **Export** updated `.jsvg`/`.svg` and CSV status history.
 
-## Roles
+## Access
 
-| Role | Capabilities |
-|---|---|
-| VIEWER | Browse plans/statuses |
-| EDITOR | Change status + export |
-| ADMIN | Upload, mapping, users, status-set labels/colors |
+Invite-only login. Anyone with an account has **full access** (upload, status changes, mapping, export, user management). There are no Viewer/Editor restrictions — only invite people who should use the tool.
 
 ## Project layout
 

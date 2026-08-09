@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { isErrorResponse, jsonError, requireApiRole } from "@/lib/api";
+import { isErrorResponse, jsonError, requireApiUser } from "@/lib/api";
 import { updateEquipmentStatus } from "@/lib/services/equipment";
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const user = await requireApiRole(["ADMIN", "EDITOR"]);
+  const user = await requireApiUser();
   if (isErrorResponse(user)) return user;
 
   try {

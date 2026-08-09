@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isErrorResponse, jsonError, requireApiRole } from "@/lib/api";
+import { isErrorResponse, jsonError, requireApiUser } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { previewCsvMapping } from "@/lib/services/mapping";
 
@@ -7,7 +7,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const user = await requireApiRole(["ADMIN"]);
+  const user = await requireApiUser();
   if (isErrorResponse(user)) return user;
 
   try {

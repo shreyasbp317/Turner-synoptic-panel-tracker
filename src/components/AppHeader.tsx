@@ -28,8 +28,6 @@ export function AppHeader({
   zones,
   user,
 }: AppHeaderProps) {
-  const isAdmin = user?.role === "ADMIN";
-
   return (
     <header className="border-b border-[#d0d0d0] bg-white px-4 py-3 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -57,33 +55,28 @@ export function AppHeader({
 
         {user ? (
           <div className="flex flex-wrap items-center justify-end gap-2 text-sm text-[var(--navy)]">
-            {isAdmin ? (
-              <nav className="flex flex-wrap items-center gap-2" aria-label="Admin">
-                <Link
-                  href="/upload"
-                  className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
-                >
-                  Upload
-                </Link>
-                <Link
-                  href="/users"
-                  className="rounded-md border border-[#0B2A5B]/25 bg-[#F0F0F0] px-3 py-1.5 text-sm font-medium hover:bg-[#E0E0E0]"
-                >
-                  Users
-                </Link>
-                <Link
-                  href="/admin/status-sets"
-                  className="rounded-md border border-[#0B2A5B]/25 bg-[#F0F0F0] px-3 py-1.5 text-sm font-medium hover:bg-[#E0E0E0]"
-                >
-                  Status sets
-                </Link>
-              </nav>
-            ) : null}
+            <nav className="flex flex-wrap items-center gap-2" aria-label="App">
+              <Link
+                href="/upload"
+                className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+              >
+                Upload
+              </Link>
+              <Link
+                href="/users"
+                className="rounded-md border border-[#0B2A5B]/25 bg-[#F0F0F0] px-3 py-1.5 text-sm font-medium hover:bg-[#E0E0E0]"
+              >
+                Users
+              </Link>
+              <Link
+                href="/admin/status-sets"
+                className="rounded-md border border-[#0B2A5B]/25 bg-[#F0F0F0] px-3 py-1.5 text-sm font-medium hover:bg-[#E0E0E0]"
+              >
+                Status sets
+              </Link>
+            </nav>
             <div className="text-right">
               <div className="font-medium">{user.name}</div>
-              <div className="text-xs uppercase tracking-wide text-[#666]">
-                {user.role}
-              </div>
             </div>
             <form action="/api/auth/logout" method="post">
               <button
