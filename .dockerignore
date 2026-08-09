@@ -1,0 +1,22 @@
+# Dependencies and build outputs
+node_modules
+npm-debug.log*
+.gitignore
+.git
+.next
+data
+uploads
+fixtures
+*.md
+!README.md
+.env
+.env.*
+!.env.example
+Dockerfile*
+docker-compose*
+.railway
+.vscode
+.cursor
+**/agent-transcripts
+scripts/inspect-jsvg.js
+scripts/start-embedded-db.mjs

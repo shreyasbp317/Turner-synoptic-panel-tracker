@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SystemType {
+  MES_FCM
+  TWMS
+  HAC
+  ELECTRICAL_YARD
+  MECHANICAL_YARD
+}
+
+enum SourceFormat {
+  SVG
+  JSVG
+}
+
+enum ShapeType {
+  RECT
+  PATH
+  POLYGON
+  CIRCLE
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model Building {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  sortOrder Int      @map("sort_order")
+  systems   System[]
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("buildings")
+}
+
+model System {
+  id          String     @id @default(cuid())
+  buildingId  String     @map("building_id")
+  building    Building   @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  systemType  SystemType @map("system_type")
+  displayName String     @map("display_name")
+  statusSetId String     @map("status_set_id")
+  statusSet   StatusSet  @relation(fields: [statusSetId], references: [id])
+  sortOrder   Int        @map("sort_order")
+  zones       Zone[]
+  floorPlans  FloorPlan[]
+
+  @@unique([buildingId, systemType])
+  @@map("systems")
+}
+
+model Zone {
+  id         String      @id @default(cuid())
+  systemId   String      @map("system_id")
+  system     System      @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  name       String
+  sortOrder  Int         @map("sort_order")
+  floorPlans FloorPlan[]
+
+  @@unique([systemId, name])
+  @@map("zones")
+}
+
+model FloorPlan {
+  id                    String       @id @default(cuid())
+  zoneId                String?      @map("zone_id")
+  zone                  Zone?        @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  systemId              String?      @map("system_id")
+  system                System?      @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  name                  String
+  originalFilename      String       @map("original_filename")
+  sourceFormat          SourceFormat @map("source_format")
+  storagePath           String       @map("storage_path")
+  backgroundAssetPath   String?      @map("background_asset_path")
+  viewBox               String?
+  canvasWidth           Float?       @map("canvas_width")
+  canvasHeight          Float?       @map("canvas_height")
+  uploadedById          String       @map("uploaded_by")
+  uploadedBy            User         @relation("UploadedFloorPlans", fields: [uploadedById], references: [id])
+  uploadedAt            DateTime     @default(now()) @map("uploaded_at")
+  sourceFileLastUpdated DateTime?    @map("source_file_last_updated")
+  lastRefreshAt         DateTime     @default(now()) @map("last_refresh_at")
+  active                Boolean      @default(true)
+  parseWarnings         String?      @map("parse_warnings")
+  equipment             Equipment[]
+
+  @@map("floor_plans")
+}
+
+model Equipment {
+  id                   String           @id @default(cuid())
+  floorPlanId          String           @map("floor_plan_id")
+  floorPlan            FloorPlan        @relation(fields: [floorPlanId], references: [id], onDelete: Cascade)
+  shapeKey             String           @map("shape_key")
+  shapeType            ShapeType        @map("shape_type")
+  x                    Float
+  y                    Float
+  width                Float
+  height               Float
+  rawShapeData         String?          @map("raw_shape_data")
+  equipmentTag         String?          @map("equipment_tag")
+  equipmentName        String?          @map("equipment_name")
+  equipmentType        String?          @map("equipment_type")
+  layer                String?
+  notes                String?
+  scheduleId           String?          @map("schedule_id")
+  scheduleActivity     String?          @map("schedule_activity")
+  currentStatusOptionId String          @map("current_status_option_id")
+  currentStatusOption  StatusSetOption  @relation(fields: [currentStatusOptionId], references: [id])
+  updatedById          String?          @map("updated_by")
+  updatedBy            User?            @relation("EquipmentUpdates", fields: [updatedById], references: [id])
+  updatedAt            DateTime         @default(now()) @updatedAt @map("updated_at")
+  history              StatusHistory[]
+
+  @@unique([floorPlanId, shapeKey])
+  @@index([floorPlanId])
+  @@map("equipment")
+}
+
+model StatusSet {
+  id      String            @id @default(cuid())
+  key     String            @unique
+  options StatusSetOption[]
+  systems System[]
+
+  @@map("status_sets")
+}
+
+model StatusSetOption {
+  id          String          @id @default(cuid())
+  statusSetId String          @map("status_set_id")
+  statusSet   StatusSet       @relation(fields: [statusSetId], references: [id], onDelete: Cascade)
+  key         String
+  label       String
+  colorHex    String          @map("color_hex")
+  sortOrder   Int             @map("sort_order")
+  isDefault   Boolean         @default(false) @map("is_default")
+  equipment   Equipment[]
+  history     StatusHistory[]
+
+  @@unique([statusSetId, key])
+  @@map("status_set_options")
+}
+
+model StatusHistory {
+  id             String          @id @default(cuid())
+  equipmentId    String          @map("equipment_id")
+  equipment      Equipment       @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  statusOptionId String          @map("status_option_id")
+  statusOption   StatusSetOption @relation(fields: [statusOptionId], references: [id])
+  changedById    String          @map("changed_by")
+  changedBy      User            @relation(fields: [changedById], references: [id])
+  changedAt      DateTime        @default(now()) @map("changed_at")
+  note           String?
+
+  @@index([equipmentId, changedAt])
+  @@map("status_history")
+}
+
+model User {
+  id                 String          @id @default(cuid())
+  name               String
+  email              String          @unique
+  passwordHash       String          @map("password_hash")
+  role               UserRole        @default(VIEWER)
+  active             Boolean         @default(true)
+  createdAt          DateTime        @default(now()) @map("created_at")
+  uploadedFloorPlans FloorPlan[]     @relation("UploadedFloorPlans")
+  equipmentUpdates   Equipment[]     @relation("EquipmentUpdates")
+  statusChanges      StatusHistory[]
+
+  @@map("users")
+}
