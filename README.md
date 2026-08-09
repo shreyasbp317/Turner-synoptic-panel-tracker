@@ -68,8 +68,7 @@ Copy `.env.example` to `.env` and set:
 
 See `DECISIONS.md` for design assumptions.
 
-## Hosting (Railway)
+## Hosting
 
-To put this on the public internet for your team, follow **[DEPLOY-RAILWAY.md](./DEPLOY-RAILWAY.md)**.
-
-Summary: GitHub repo → Railway web service + Postgres + volume at `/app/uploads` → set env vars → seed admin → share the Railway URL.
+- **Free forever (recommended for your team):** Oracle Cloud Always Free — see **[DEPLOY-ORACLE.md](./DEPLOY-ORACLE.md)**
+- Railway (paid ~$5/mo): **[DEPLOY-RAILWAY.md](./DEPLOY-RAILWAY.md)**
