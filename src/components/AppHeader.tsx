@@ -57,12 +57,6 @@ export function AppHeader({
           <div className="flex flex-wrap items-center justify-end gap-2 text-sm text-[var(--navy)]">
             <nav className="flex flex-wrap items-center gap-2" aria-label="App">
               <Link
-                href="/upload"
-                className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
-              >
-                Upload
-              </Link>
-              <Link
                 href="/users"
                 className="rounded-md border border-[#0B2A5B]/25 bg-[#F0F0F0] px-3 py-1.5 text-sm font-medium hover:bg-[#E0E0E0]"
               >

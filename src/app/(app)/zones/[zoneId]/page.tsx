@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { requireUser } from "@/lib/auth/session";
@@ -52,13 +51,7 @@ export default async function ZonePage({
       />
       <main className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
         <p className="text-lg font-semibold text-[var(--navy)]">{zone.name}</p>
-        <p className="text-[#555]">No active floor plan for this zone yet.</p>
-        <Link
-          href="/upload"
-          className="rounded-md bg-[var(--navy)] px-4 py-2 text-sm font-medium text-white"
-        >
-          Upload floor plan
-        </Link>
+        <p className="text-[#555]">No floor plan seeded for this zone yet.</p>
       </main>
     </div>
   );

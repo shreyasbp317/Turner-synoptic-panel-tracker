@@ -73,13 +73,7 @@ export default async function SystemPage({
         user={{ name: user.name, role: user.role }}
       />
       <main className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-        <p className="text-[#555]">No active floor plan for this system yet.</p>
-        <Link
-          href="/upload"
-          className="rounded-md bg-[var(--navy)] px-4 py-2 text-sm font-medium text-white"
-        >
-          Upload floor plan
-        </Link>
+        <p className="text-[#555]">No floor plan seeded for this system yet.</p>
       </main>
     </div>
   );

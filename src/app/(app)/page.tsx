@@ -19,12 +19,6 @@ export default async function BuildingsPage() {
       <main className="flex-1 p-4 sm:p-6">
         <div className="mb-4 flex flex-wrap gap-2">
           <Link
-            href="/upload"
-            className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white"
-          >
-            Upload floor plan
-          </Link>
-          <Link
             href="/users"
             className="rounded-md border border-[#0B2A5B]/30 bg-white px-3 py-1.5 text-sm font-medium text-[var(--navy)]"
           >

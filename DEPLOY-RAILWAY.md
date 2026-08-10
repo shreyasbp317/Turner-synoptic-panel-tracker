@@ -1,124 +1,88 @@
-# Deploy to Railway
+# Deploy to Railway (demo URL that stays online)
 
-This app is set up for **Railway**: Next.js web service + managed Postgres + a volume for uploaded floor plans.
+Use this when you need a **public link** that works with your laptop off.  
+Floor plans are **bundled SVGs** in `/plans` and seeded into the DB (no upload UI).
 
-## 1. Put the code on GitHub
+## 1. Code on GitHub
 
-If you haven’t already:
-
-1. Create a new empty GitHub repo (e.g. `rpl-10x-tracker`)
-2. From this project folder:
-
-```bash
-git add .
-git commit -m "Initial RPL-10X tracker with Railway deploy config"
-git branch -M main
-git remote add origin https://github.com/YOUR_USER/rpl-10x-tracker.git
-git push -u origin main
-```
+Repo: `https://github.com/shreyasbp317/Turner-synoptic-panel-tracker`  
+Push `main` after local changes.
 
 ## 2. Create the Railway project
 
-1. Go to [railway.app](https://railway.app) and sign in (GitHub login is easiest)
-2. **New Project** → **Deploy from GitHub repo** → select `rpl-10x-tracker`
-3. Railway will detect the `Dockerfile` and start a first build (it may fail until env vars / DB exist — that’s OK)
+1. Open [railway.app](https://railway.app) → sign in with GitHub  
+2. **New Project** → **Deploy from GitHub repo** → `Turner-synoptic-panel-tracker`  
+3. First build may fail until Postgres + env vars exist — OK  
 
 ## 3. Add PostgreSQL
 
-1. In the project canvas: **+ New** → **Database** → **PostgreSQL**
-2. Open your **web service** → **Variables**
-3. Add a **Variable Reference**:
-   - Name: `DATABASE_URL`
-   - Value: `${{Postgres.DATABASE_URL}}`  
-     (pick the Postgres service’s `DATABASE_URL` from the UI)
+1. **+ New** → **Database** → **PostgreSQL**  
+2. Web service → **Variables** → add:  
+   - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`
 
-## 4. Add a volume for uploads (required)
+## 4. Environment variables
 
-Floor plan files must survive redeploys.
+Web service → **Variables**:
 
-1. Open the **web service** → **Settings** → **Volumes** → **Add Volume**
-2. Mount path: `/app/uploads`
-3. Also set variable: `UPLOAD_DIR=/app/uploads`
-
-## 5. Set the remaining environment variables
-
-On the **web service** → **Variables**:
-
-| Variable | Example / notes |
+| Variable | Value |
 |---|---|
-| `DATABASE_URL` | Reference from Postgres (step 3) |
-| `UPLOAD_DIR` | `/app/uploads` |
-| `SESSION_SECRET` | Long random string, ≥32 characters |
-| `ADMIN_EMAIL` | Your real email (first admin login) |
-| `ADMIN_PASSWORD` | Strong password — change after first login |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+| `STORAGE_DRIVER` | `postgres` |
+| `SESSION_SECRET` | Random ≥32 chars |
+| `ADMIN_EMAIL` | Your login email |
+| `ADMIN_PASSWORD` | Strong password |
 | `ADMIN_NAME` | Your name |
 | `NODE_ENV` | `production` |
 
-Generate a session secret (PowerShell):
+`STORAGE_DRIVER=postgres` stores SVG bytes in the DB — no volume needed for the demo.
+
+PowerShell secret:
 
 ```powershell
 -join ((48..57 + 65..90 + 97..122) | Get-Random -Count 48 | ForEach-Object { [char]$_ })
 ```
 
-## 6. Public URL
+Redeploy after saving variables.
 
-1. Web service → **Settings** → **Networking** → **Generate Domain**
-2. You’ll get something like `https://rpl-10x-tracker-production.up.railway.app`
-3. Share that URL with the team (they still need login accounts you create)
+## 5. Public URL
 
-## 7. Seed the admin user (one time)
+Web service → **Settings** → **Networking** → **Generate Domain**  
+Share `https://….up.railway.app` (login required).
 
-After the first successful deploy (migrations run automatically on boot):
+## 6. Seed admin + RPL 3 plans (one time, from your PC)
 
-**Option A — Railway CLI**
-
-```bash
-npm i -g @railway/cli
-railway login
-railway link
-railway run npm run db:seed
-```
-
-**Option B — one-off from your PC**
-
-Copy the **public** Postgres URL from Railway Postgres → Variables, then:
+Copy the **public** Postgres URL from Railway Postgres → Variables:
 
 ```powershell
-$env:DATABASE_URL="postgresql://...@....railway.app:5432/railway"
+cd "C:\Users\shreyas bp\Projects\rpl-10x-tracker"
+$env:DATABASE_URL="postgresql://...public-host.../railway"
+$env:STORAGE_DRIVER="postgres"
 npm run db:seed
+npm run db:seed-plans
 ```
 
-Then open the site and sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+Then open the site → log in → **RPL 3** → Floor plan dropdown.
 
-## 8. Create teammate accounts
+## 7. Teammate accounts
 
-Signed in as ADMIN → **Users** → add EDITOR / VIEWER accounts.  
-Do **not** share the admin password.
+**Users** → add accounts. Do not share the admin password.
 
-## Accessing the database
+## Updating
 
-| Method | How |
-|---|---|
-| Railway dashboard | Postgres service → **Data** / **Query** |
-| Prisma Studio (local) | Set `DATABASE_URL` to Railway’s URL, run `npx prisma studio` |
-| DBeaver / TablePlus | Host/user/password from Postgres service variables |
+Push to `main` → Railway redeploys. Migrations run on boot.
 
-Use the **public** URL when connecting from your laptop; the app itself should keep using the private `${{Postgres.DATABASE_URL}}` reference.
-
-## Updating the site
-
-Push to `main` on GitHub → Railway redeploys automatically.  
-Migrations apply on container start. Uploaded files stay on the volume.
+Add more buildings later: drop SVGs in `plans/…`, extend `scripts/seed-plans.ts`, push, re-run `npm run db:seed-plans` with Railway’s public `DATABASE_URL` + `STORAGE_DRIVER=postgres`.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| Build OK, crash on start | Check `DATABASE_URL` is set / referenced |
-| Login works, uploads vanish | Volume not mounted at `/app/uploads` |
-| 502 / healthcheck fail | Open deploy logs; confirm `/login` returns 200 |
-| Can’t seed | `ADMIN_EMAIL` + `ADMIN_PASSWORD` must be set in the env you seed against |
+| Crash on start | `DATABASE_URL` not set / not referenced |
+| Login fails | Re-run `db:seed` with correct `ADMIN_*` on Railway DB |
+| Empty dropdown | Run `db:seed-plans` against Railway DB |
+| Blank plan | Confirm `STORAGE_DRIVER=postgres` on the web service **and** when seeding |
+| 502 | Check deploy logs |
 
-## Cost note
+## Cost
 
-Railway’s Hobby plan is enough to try with a small team. For always-on / more usage, upgrade when needed.
+Trial credits for a short demo; Hobby (~$5/mo) to keep always-on.

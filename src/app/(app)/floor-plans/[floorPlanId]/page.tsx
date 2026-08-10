@@ -32,14 +32,6 @@ export default async function FloorPlanPage({
 
   const subtitle = formatScopeSubtitle(building.name, system.displayName);
 
-  const replaceParams = new URLSearchParams({
-    replace: "1",
-    buildingId: building.id,
-    systemId: system.id,
-  });
-  if (floorPlan.zoneId) replaceParams.set("zoneId", floorPlan.zoneId);
-  if (floorPlan.name) replaceParams.set("name", floorPlan.name);
-
   return (
     <FloorPlanViewer
       subtitle={subtitle}
@@ -58,7 +50,6 @@ export default async function FloorPlanPage({
       canEdit
       canMap
       canExport
-      replaceHref={`/upload?${replaceParams.toString()}`}
     />
   );
 }

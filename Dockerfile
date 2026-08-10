@@ -38,6 +38,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/scripts/start-prod.mjs ./scripts/start-prod.mjs
+COPY --from=builder /app/scripts/seed-plans.ts ./scripts/seed-plans.ts
+COPY --from=builder /app/plans ./plans
 COPY --from=builder /app/next.config.ts ./next.config.ts
 
 RUN mkdir -p /app/uploads \
