@@ -6,7 +6,7 @@ RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /v
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
-RUN npm ci
+RUN npm install
 
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
