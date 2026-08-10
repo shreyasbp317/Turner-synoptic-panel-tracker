@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { AppHeader, type AppHeaderZone } from "@/components/AppHeader";
 import { InfoFilterRow } from "@/components/InfoFilterRow";
 import { OverviewCharts, type OverviewGroup } from "@/components/OverviewCharts";
@@ -27,6 +28,7 @@ export type FloorPlanViewerProps = {
   canEdit: boolean;
   canMap: boolean;
   canExport: boolean;
+  replaceHref?: string;
 };
 
 function buildOverviewGroups(
@@ -90,6 +92,7 @@ export function FloorPlanViewer({
   canEdit,
   canMap,
   canExport,
+  replaceHref,
 }: FloorPlanViewerProps) {
   const [equipment, setEquipment] = useState(initialEquipment);
   const [nameFilter, setNameFilter] = useState("all");
@@ -124,6 +127,20 @@ export function FloorPlanViewer({
     <div className="flex min-h-full flex-col">
       <AppHeader title="RPL-10X" subtitle={subtitle} backHref={backHref} zones={zones} user={user} />
       <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
+        {replaceHref ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[var(--card-bg)] px-4 py-3">
+            <p className="text-sm text-[#555]">
+              Need a newer Synoptic / SVG for this same location? Replace the attached plan
+              without changing building or zone.
+            </p>
+            <Link
+              href={replaceHref}
+              className="shrink-0 rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+            >
+              Replace floor plan
+            </Link>
+          </div>
+        ) : null}
         <InfoFilterRow
           sourceFileLastUpdated={sourceFileLastUpdated}
           lastRefreshAt={lastRefreshAt}

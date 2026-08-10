@@ -4,30 +4,40 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 
-export type UploadOption = {
-  id: string;
-  name: string;
-  buildingId?: string;
-  systemId?: string;
-  hasZones?: boolean;
-};
-
 export type UploadPageClientProps = {
   buildings: { id: string; name: string }[];
   systems: { id: string; buildingId: string; displayName: string; hasZones: boolean }[];
   zones: { id: string; systemId: string; name: string }[];
+  initialBuildingId?: string;
+  initialSystemId?: string;
+  initialZoneId?: string;
+  initialName?: string;
+  replaceMode?: boolean;
+  replaceLabel?: string;
 };
 
-export function UploadPageClient({ buildings, systems, zones }: UploadPageClientProps) {
+export function UploadPageClient({
+  buildings,
+  systems,
+  zones,
+  initialBuildingId = "",
+  initialSystemId = "",
+  initialZoneId = "",
+  initialName = "",
+  replaceMode = false,
+  replaceLabel,
+}: UploadPageClientProps) {
   const toast = useToast();
   const router = useRouter();
-  const [buildingId, setBuildingId] = useState("");
-  const [systemId, setSystemId] = useState("");
-  const [zoneId, setZoneId] = useState("");
-  const [name, setName] = useState("");
+  const [buildingId, setBuildingId] = useState(initialBuildingId);
+  const [systemId, setSystemId] = useState(initialSystemId);
+  const [zoneId, setZoneId] = useState(initialZoneId);
+  const [name, setName] = useState(initialName);
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  const locked = Boolean(replaceMode && initialBuildingId && initialSystemId);
 
   const filteredSystems = useMemo(
     () => systems.filter((s) => s.buildingId === buildingId),
@@ -76,8 +86,28 @@ export function UploadPageClient({ buildings, systems, zones }: UploadPageClient
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error || "Upload failed");
       }
-      const data = (await res.json()) as { floorPlanId?: string; mapUrl?: string };
-      toast.success("Floor plan uploaded");
+      const data = (await res.json()) as {
+        floorPlanId?: string;
+        mapUrl?: string;
+        mappingCarryForward?: {
+          matched: number;
+          newShapes: string[];
+          missingShapes: string[];
+        };
+      };
+
+      const carry = data.mappingCarryForward;
+      if (replaceMode && carry) {
+        toast.success(
+          `Plan replaced. Kept ${carry.matched} mapped shapes` +
+            (carry.newShapes.length ? `, ${carry.newShapes.length} new` : "") +
+            (carry.missingShapes.length ? `, ${carry.missingShapes.length} missing from new file` : "") +
+            "."
+        );
+      } else {
+        toast.success(replaceMode ? "Floor plan replaced" : "Floor plan uploaded");
+      }
+
       if (data.mapUrl) {
         router.push(data.mapUrl);
       } else if (data.floorPlanId) {
@@ -94,11 +124,24 @@ export function UploadPageClient({ buildings, systems, zones }: UploadPageClient
 
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-4 rounded-xl bg-[var(--card-bg)] p-6">
+      {replaceMode ? (
+        <div className="rounded-lg border border-[#0B2A5B]/20 bg-white px-3 py-3 text-sm text-[var(--navy)]">
+          <p className="font-semibold">Replace existing floor plan</p>
+          <p className="mt-1 text-[#555]">
+            {replaceLabel
+              ? `Uploading a new .svg/.jsvg will replace the current plan for ${replaceLabel}.`
+              : "Uploading a new .svg/.jsvg will replace the current plan in this location."}{" "}
+            Matching shape keys keep their equipment tags and status history.
+          </p>
+        </div>
+      ) : null}
+
       <label className="block text-sm">
         <span className="mb-1 block text-xs font-semibold uppercase text-[#666]">Building</span>
         <select
           required
-          className="w-full rounded-md border border-[#ccc] bg-white px-3 py-2"
+          disabled={locked}
+          className="w-full rounded-md border border-[#ccc] bg-white px-3 py-2 disabled:opacity-60"
           value={buildingId}
           onChange={(e) => {
             setBuildingId(e.target.value);
@@ -119,8 +162,8 @@ export function UploadPageClient({ buildings, systems, zones }: UploadPageClient
         <span className="mb-1 block text-xs font-semibold uppercase text-[#666]">System</span>
         <select
           required
-          disabled={!buildingId}
-          className="w-full rounded-md border border-[#ccc] bg-white px-3 py-2 disabled:opacity-50"
+          disabled={!buildingId || locked}
+          className="w-full rounded-md border border-[#ccc] bg-white px-3 py-2 disabled:opacity-60"
           value={systemId}
           onChange={(e) => {
             setSystemId(e.target.value);
@@ -143,7 +186,8 @@ export function UploadPageClient({ buildings, systems, zones }: UploadPageClient
           </span>
           <select
             required
-            className="w-full rounded-md border border-[#ccc] bg-white px-3 py-2"
+            disabled={locked}
+            className="w-full rounded-md border border-[#ccc] bg-white px-3 py-2 disabled:opacity-60"
             value={zoneId}
             onChange={(e) => setZoneId(e.target.value)}
           >
@@ -201,7 +245,13 @@ export function UploadPageClient({ buildings, systems, zones }: UploadPageClient
         disabled={uploading}
         className="w-full rounded-md bg-[var(--navy)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
       >
-        {uploading ? "Uploading…" : "Upload floor plan"}
+        {uploading
+          ? replaceMode
+            ? "Replacing…"
+            : "Uploading…"
+          : replaceMode
+            ? "Replace floor plan"
+            : "Upload floor plan"}
       </button>
     </form>
   );
