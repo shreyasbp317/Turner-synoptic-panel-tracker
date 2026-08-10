@@ -127,13 +127,20 @@ export async function getFloorPlanViewerData(floorPlanId: string) {
     }
   }
 
+  // Prefer a dedicated background asset URL (Blob) so Vercel doesn't have to
+  // proxy multi‑MB SVG responses through serverless functions.
+  const remoteBg =
+    floorPlan.backgroundAssetPath && /^https?:\/\//i.test(floorPlan.backgroundAssetPath)
+      ? floorPlan.backgroundAssetPath
+      : null;
+
   return {
     floorPlan,
     system,
     building: system.building,
     zoneName,
     zones: "zones" in system ? system.zones : [],
-    backgroundUrl: `/api/floor-plans/${floorPlan.id}/background`,
+    backgroundUrl: remoteBg || `/api/floor-plans/${floorPlan.id}/background`,
     viewBox: bgMeta.viewBox,
     canvasWidth: bgMeta.canvasWidth,
     canvasHeight: bgMeta.canvasHeight,

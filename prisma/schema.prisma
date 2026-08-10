@@ -181,3 +181,13 @@ model User {
 
   @@map("users")
 }
+
+model StoredFile {
+  id           String   @id @default(cuid())
+  relativePath String   @unique @map("relative_path")
+  content      Bytes
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("stored_files")
+}

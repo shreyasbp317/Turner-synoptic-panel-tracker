@@ -66,5 +66,6 @@ See `DECISIONS.md` for design assumptions.
 
 ## Hosting
 
-- **Free forever (recommended for your team):** Oracle Cloud Always Free — see **[DEPLOY-ORACLE.md](./DEPLOY-ORACLE.md)**
+- **Temporary demo for colleagues:** Vercel + Neon + Blob — see **[DEPLOY-VERCEL.md](./DEPLOY-VERCEL.md)**
+- **Free forever:** Oracle Cloud Always Free — see **[DEPLOY-ORACLE.md](./DEPLOY-ORACLE.md)**
 - Railway (paid ~$5/mo): **[DEPLOY-RAILWAY.md](./DEPLOY-RAILWAY.md)**

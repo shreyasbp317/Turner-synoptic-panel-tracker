@@ -14,6 +14,8 @@ export type UploadPageClientProps = {
   initialName?: string;
   replaceMode?: boolean;
   replaceLabel?: string;
+  /** When true, large files go directly to Vercel Blob (needed on Vercel). */
+  useBlobUpload?: boolean;
 };
 
 export function UploadPageClient({
@@ -26,6 +28,7 @@ export function UploadPageClient({
   initialName = "",
   replaceMode = false,
   replaceLabel,
+  useBlobUpload = false,
 }: UploadPageClientProps) {
   const toast = useToast();
   const router = useRouter();
@@ -71,22 +74,7 @@ export function UploadPageClient({
 
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("buildingId", buildingId);
-      fd.append("systemId", systemId);
-      if (zoneId) fd.append("zoneId", zoneId);
-      if (name) fd.append("name", name);
-      fd.append("file", file);
-
-      const res = await fetch("/api/floor-plans/upload", {
-        method: "POST",
-        body: fd,
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error || "Upload failed");
-      }
-      const data = (await res.json()) as {
+      let data: {
         floorPlanId?: string;
         mapUrl?: string;
         mappingCarryForward?: {
@@ -95,6 +83,52 @@ export function UploadPageClient({
           missingShapes: string[];
         };
       };
+
+      // Vercel serverless body limit is 4.5MB — send large files via Blob client upload.
+      const mustUseBlob = useBlobUpload || file.size > 3.5 * 1024 * 1024;
+
+      if (mustUseBlob) {
+        const { upload } = await import("@vercel/blob/client");
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/blob/upload",
+        });
+
+        const res = await fetch("/api/floor-plans/upload/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            blobUrl: blob.url,
+            filename: file.name,
+            buildingId,
+            systemId,
+            zoneId: zoneId || null,
+            name: name || undefined,
+          }),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error || "Upload failed");
+        }
+        data = await res.json();
+      } else {
+        const fd = new FormData();
+        fd.append("buildingId", buildingId);
+        fd.append("systemId", systemId);
+        if (zoneId) fd.append("zoneId", zoneId);
+        if (name) fd.append("name", name);
+        fd.append("file", file);
+
+        const res = await fetch("/api/floor-plans/upload", {
+          method: "POST",
+          body: fd,
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error || "Upload failed");
+        }
+        data = await res.json();
+      }
 
       const carry = data.mappingCarryForward;
       if (replaceMode && carry) {

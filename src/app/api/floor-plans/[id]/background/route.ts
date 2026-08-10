@@ -1,6 +1,7 @@
 import { isErrorResponse, jsonError, requireApiUser } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { loadFloorPlanBackground } from "@/lib/floor-plan-view";
+import { getFileStorage } from "@/lib/storage";
 
 export async function GET(
   _request: Request,
@@ -13,11 +14,36 @@ export async function GET(
     const { id } = await context.params;
     const floorPlan = await prisma.floorPlan.findUnique({
       where: { id },
-      select: { storagePath: true, originalFilename: true },
+      select: {
+        storagePath: true,
+        backgroundAssetPath: true,
+        originalFilename: true,
+      },
     });
     if (!floorPlan) return jsonError("Floor plan not found.", 404);
 
-    const bg = await loadFloorPlanBackground(floorPlan.storagePath, floorPlan.originalFilename);
+    if (
+      floorPlan.backgroundAssetPath &&
+      /^https?:\/\//i.test(floorPlan.backgroundAssetPath)
+    ) {
+      return Response.redirect(floorPlan.backgroundAssetPath, 302);
+    }
+
+    if (floorPlan.backgroundAssetPath) {
+      const storage = getFileStorage();
+      const svg = await storage.readText(floorPlan.backgroundAssetPath);
+      return new Response(svg, {
+        headers: {
+          "Content-Type": "image/svg+xml; charset=utf-8",
+          "Cache-Control": "private, max-age=60",
+        },
+      });
+    }
+
+    const bg = await loadFloorPlanBackground(
+      floorPlan.storagePath,
+      floorPlan.originalFilename
+    );
     return new Response(bg.backgroundSvg, {
       headers: {
         "Content-Type": "image/svg+xml; charset=utf-8",

@@ -85,15 +85,25 @@ export async function uploadFloorPlan(opts: {
   const storage = getFileStorage();
   const id = randomUUID();
   const ext = parsed.format === "JSVG" ? "jsvg" : "svg";
-  const storagePath = path.posix.join(
+  const logicalPath = path.posix.join(
     "floor-plans",
     system.buildingId,
     system.id,
     zone?.id || "system",
     `${id}.${ext}`
   );
+  const bgLogicalPath = path.posix.join(
+    "floor-plans",
+    system.buildingId,
+    system.id,
+    zone?.id || "system",
+    `${id}-background.svg`
+  );
 
-  await storage.save(storagePath, text);
+  const savedOriginal = await storage.save(logicalPath, text);
+  const savedBackground = await storage.save(bgLogicalPath, parsed.backgroundSvg);
+  const storagePath = savedOriginal.relativePath;
+  const backgroundAssetPath = savedBackground.relativePath;
 
   const previous = await prisma.floorPlan.findFirst({
     where: hasZones
@@ -122,7 +132,7 @@ export async function uploadFloorPlan(opts: {
         originalFilename: opts.filename,
         sourceFormat: parsed.format as SourceFormat,
         storagePath,
-        backgroundAssetPath: null,
+        backgroundAssetPath,
         viewBox: parsed.viewBox ?? null,
         canvasWidth: parsed.canvasWidth ?? null,
         canvasHeight: parsed.canvasHeight ?? null,

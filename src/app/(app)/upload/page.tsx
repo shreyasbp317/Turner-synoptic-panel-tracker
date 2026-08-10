@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { formatScopeSubtitle } from "@/lib/labels";
 import { systemHasZones } from "@/lib/services/floor-plans";
+import { useClientBlobUpload } from "@/lib/storage";
 
 export default async function UploadPage({
   searchParams,
@@ -48,12 +49,11 @@ export default async function UploadPage({
     if (zone) replaceLabel += ` · ${zone.name}`;
   }
 
-  const backHref =
-    params.zoneId
-      ? `/zones/${params.zoneId}`
-      : params.systemId
-        ? `/systems/${params.systemId}`
-        : "/";
+  const backHref = params.zoneId
+    ? `/zones/${params.zoneId}`
+    : params.systemId
+      ? `/systems/${params.systemId}`
+      : "/";
 
   return (
     <div className="flex min-h-full flex-col">
@@ -78,6 +78,7 @@ export default async function UploadPage({
           initialName={params.name || ""}
           replaceMode={replaceMode}
           replaceLabel={replaceLabel}
+          useBlobUpload={useClientBlobUpload()}
         />
       </main>
     </div>
