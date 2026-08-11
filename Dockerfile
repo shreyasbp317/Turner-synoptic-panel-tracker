@@ -2,6 +2,8 @@
 
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
+# prisma generate (postinstall) needs a URL at build time; runtime uses Railway's DATABASE_URL
+ENV DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/build"
 RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
@@ -10,6 +12,7 @@ RUN npm install
 
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
+ENV DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/build"
 RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
