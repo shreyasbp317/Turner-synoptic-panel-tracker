@@ -134,12 +134,26 @@ function ShapeElement({
   const stroke = selected ? "#0B2A5B" : unmapped ? "#666666" : eq.currentStatus.colorHex;
   const strokeWidth = selected ? 2.5 : 1.25;
   const dash = unmapped ? "4 3" : undefined;
+
+  let transform: string | undefined;
+  let rawObj: Record<string, unknown> | null = null;
+  const raw = eq.rawShapeData?.trim() ?? "";
+  if (raw.startsWith("{")) {
+    try {
+      rawObj = JSON.parse(raw) as Record<string, unknown>;
+      if (typeof rawObj.transform === "string") transform = rawObj.transform;
+    } catch {
+      rawObj = null;
+    }
+  }
+
   const common = {
     fill,
     fillOpacity: opacity,
     stroke,
     strokeWidth,
     strokeDasharray: dash,
+    transform,
     style: { cursor: "pointer", touchAction: "none" as const },
     onPointerDown,
     onPointerEnter,
@@ -147,16 +161,16 @@ function ShapeElement({
     onContextMenu,
   };
 
-  const raw = eq.rawShapeData?.trim() ?? "";
-
   if (eq.shapeType === "CIRCLE") {
-    try {
-      const parsed = JSON.parse(raw) as { cx?: number; cy?: number; r?: number };
-      if (parsed.cx != null && parsed.cy != null && parsed.r != null) {
-        return <circle cx={parsed.cx} cy={parsed.cy} r={parsed.r} {...common} />;
-      }
-    } catch {
-      /* fall through */
+    if (rawObj && rawObj.cx != null && rawObj.cy != null && rawObj.r != null) {
+      return (
+        <circle
+          cx={Number(rawObj.cx)}
+          cy={Number(rawObj.cy)}
+          r={Number(rawObj.r)}
+          {...common}
+        />
+      );
     }
     return (
       <ellipse
@@ -169,40 +183,37 @@ function ShapeElement({
     );
   }
 
-  if (eq.shapeType === "POLYGON" && raw) {
-    return <polygon points={raw} {...common} />;
+  if (eq.shapeType === "POLYGON") {
+    const points =
+      (rawObj && typeof rawObj.points === "string" && rawObj.points) ||
+      (!raw.startsWith("{") ? raw : "");
+    if (points) return <polygon points={points} {...common} />;
   }
 
-  if (eq.shapeType === "PATH" && raw) {
-    return <path d={raw} {...common} />;
+  if (eq.shapeType === "PATH") {
+    const d =
+      (rawObj && typeof rawObj.d === "string" && rawObj.d) ||
+      (!raw.startsWith("{") ? raw : "");
+    if (d) return <path d={d} {...common} />;
   }
 
   if (eq.shapeType === "RECT") {
-    try {
-      const parsed = JSON.parse(raw) as {
-        x?: number;
-        y?: number;
-        width?: number;
-        height?: number;
-      };
-      if (
-        parsed.x != null &&
-        parsed.y != null &&
-        parsed.width != null &&
-        parsed.height != null
-      ) {
-        return (
-          <rect
-            x={parsed.x}
-            y={parsed.y}
-            width={parsed.width}
-            height={parsed.height}
-            {...common}
-          />
-        );
-      }
-    } catch {
-      /* fall through */
+    if (
+      rawObj &&
+      rawObj.x != null &&
+      rawObj.y != null &&
+      rawObj.width != null &&
+      rawObj.height != null
+    ) {
+      return (
+        <rect
+          x={Number(rawObj.x)}
+          y={Number(rawObj.y)}
+          width={Number(rawObj.width)}
+          height={Number(rawObj.height)}
+          {...common}
+        />
+      );
     }
   }
 

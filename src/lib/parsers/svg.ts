@@ -1,9 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import type { ParsedFloorPlan, ParsedShape, ParseWarning } from "./types";
 
-// Lightweight dependency-free-ish SVG parse using regex + DOM-like walk via fast-xml-parser.
-// Install fast-xml-parser if needed.
-
 function num(v: unknown): number | null {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
@@ -16,6 +13,100 @@ function attrs(node: Record<string, unknown>): Record<string, string> {
     if (k.startsWith("@_") && v != null) out[k.slice(2)] = String(v);
   }
   return out;
+}
+
+/** SVG matrix as [a, b, c, d, e, f] (column-major affine). */
+type Mat = [number, number, number, number, number, number];
+
+const IDENTITY: Mat = [1, 0, 0, 1, 0, 0];
+
+function multiply(a: Mat, b: Mat): Mat {
+  return [
+    a[0] * b[0] + a[2] * b[1],
+    a[1] * b[0] + a[3] * b[1],
+    a[0] * b[2] + a[2] * b[3],
+    a[1] * b[2] + a[3] * b[3],
+    a[0] * b[4] + a[2] * b[5] + a[4],
+    a[1] * b[4] + a[3] * b[5] + a[5],
+  ];
+}
+
+function applyMat(m: Mat, x: number, y: number): { x: number; y: number } {
+  return { x: m[0] * x + m[2] * y + m[4], y: m[1] * x + m[3] * y + m[5] };
+}
+
+function isIdentity(m: Mat): boolean {
+  return m[0] === 1 && m[1] === 0 && m[2] === 0 && m[3] === 1 && m[4] === 0 && m[5] === 0;
+}
+
+/** Parse SVG transform list (matrix/translate/scale/rotate) left-to-right. */
+export function parseSvgTransform(transform: string | undefined): Mat {
+  if (!transform?.trim()) return IDENTITY;
+  let m = IDENTITY;
+  const re = /(matrix|translate|scale|rotate)\s*\(([^)]*)\)/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(transform))) {
+    const kind = match[1].toLowerCase();
+    const args = match[2]
+      .trim()
+      .split(/[\s,]+/)
+      .filter(Boolean)
+      .map(Number);
+    let next: Mat = IDENTITY;
+    if (kind === "matrix" && args.length >= 6) {
+      next = [args[0], args[1], args[2], args[3], args[4], args[5]];
+    } else if (kind === "translate") {
+      next = [1, 0, 0, 1, args[0] || 0, args[1] || 0];
+    } else if (kind === "scale") {
+      const sx = args[0] ?? 1;
+      const sy = args[1] ?? sx;
+      next = [sx, 0, 0, sy, 0, 0];
+    } else if (kind === "rotate") {
+      const angle = ((args[0] || 0) * Math.PI) / 180;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const cx = args[1] || 0;
+      const cy = args[2] || 0;
+      next = multiply(
+        multiply([1, 0, 0, 1, cx, cy], [cos, sin, -sin, cos, 0, 0]),
+        [1, 0, 0, 1, -cx, -cy]
+      );
+    }
+    m = multiply(m, next);
+  }
+  return m;
+}
+
+function transformBBox(
+  box: { x: number; y: number; width: number; height: number },
+  transform: string | undefined
+): { x: number; y: number; width: number; height: number } {
+  const m = parseSvgTransform(transform);
+  if (isIdentity(m)) return box;
+  const corners = [
+    applyMat(m, box.x, box.y),
+    applyMat(m, box.x + box.width, box.y),
+    applyMat(m, box.x, box.y + box.height),
+    applyMat(m, box.x + box.width, box.y + box.height),
+  ];
+  const xs = corners.map((p) => p.x);
+  const ys = corners.map((p) => p.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(1, maxX - minX),
+    height: Math.max(1, maxY - minY),
+  };
+}
+
+function tagFromId(id: string): string | undefined {
+  if (/^(rect|path|polygon|circle)\d+$/i.test(id)) return undefined;
+  // Synoptic Designer prefixes equipment ids with "_"
+  return id.replace(/^_+/, "") || undefined;
 }
 
 function bboxFromPoints(points: string): { x: number; y: number; width: number; height: number } | null {
@@ -46,7 +137,6 @@ function bboxFromPath(d: string): { x: number; y: number; width: number; height:
     minY = Infinity,
     maxX = -Infinity,
     maxY = -Infinity;
-  // Approximate: treat numbers as interleaved x,y where possible (good enough for hit-testing).
   for (let i = 0; i + 1 < nums.length; i += 2) {
     const x = nums[i];
     const y = nums[i + 1];
@@ -82,25 +172,30 @@ function walk(
   const obj = node as Record<string, unknown>;
   const a = attrs(obj);
   const id = a.id;
+  const transform = a.transform;
 
   const tryShape = (
     shapeType: ParsedShape["shapeType"],
-    box: { x: number; y: number; width: number; height: number } | null,
-    raw?: string
+    localBox: { x: number; y: number; width: number; height: number } | null,
+    rawPayload: Record<string, unknown>
   ) => {
     if (!id || !looksLikeEquipmentId(id)) return;
-    if (!box) {
-      warnings.push({ shapeKey: id, message: `Could not compute bounding box for <${shapeType.toLowerCase()} id="${id}">.` });
+    if (!localBox) {
+      warnings.push({
+        shapeKey: id,
+        message: `Could not compute bounding box for <${shapeType.toLowerCase()} id="${id}">.`,
+      });
       return;
     }
+    const box = transformBBox(localBox, transform);
     const tag =
       a["data-equipment-tag"] ||
       a["data-tag"] ||
       a["data-name"] ||
-      (a.title && !/^rect\d+$/i.test(a.title) ? a.title : undefined) ||
-      (!/^rect\d+$/i.test(id) && !/^path\d+$/i.test(id) && !/^polygon\d+$/i.test(id) && !/^circle\d+$/i.test(id)
-        ? id
-        : undefined);
+      (a.title && !/^rect\d+$/i.test(a.title) ? a.title.replace(/^_+/, "") : undefined) ||
+      tagFromId(id);
+
+    if (transform) rawPayload.transform = transform;
 
     shapes.push({
       shapeKey: id,
@@ -109,7 +204,7 @@ function walk(
       y: box.y,
       width: box.width,
       height: box.height,
-      rawShapeData: raw,
+      rawShapeData: JSON.stringify(rawPayload),
       equipmentTag: tag,
       equipmentName: a["data-equipment-name"] || tag,
       equipmentType: a["data-equipment-type"],
@@ -127,19 +222,19 @@ function walk(
     if (width == null || height == null) {
       warnings.push({ shapeKey: id, message: `Rect "${id}" missing width/height.` });
     } else {
-      tryShape("RECT", { x, y, width, height }, JSON.stringify({ x, y, width, height }));
+      tryShape("RECT", { x, y, width, height }, { x, y, width, height });
     }
   } else if (localName === "circle" && id) {
     const cx = num(a.cx) ?? 0;
     const cy = num(a.cy) ?? 0;
     const r = num(a.r) ?? 0;
-    tryShape("CIRCLE", { x: cx - r, y: cy - r, width: r * 2, height: r * 2 }, JSON.stringify({ cx, cy, r }));
+    tryShape("CIRCLE", { x: cx - r, y: cy - r, width: r * 2, height: r * 2 }, { cx, cy, r });
   } else if (localName === "polygon" && id) {
     const points = a.points || "";
-    tryShape("POLYGON", bboxFromPoints(points), points);
+    tryShape("POLYGON", bboxFromPoints(points), { points });
   } else if (localName === "path" && id) {
     const d = a.d || "";
-    tryShape("PATH", bboxFromPath(d), d);
+    tryShape("PATH", bboxFromPath(d), { d });
   }
 
   for (const [key, value] of Object.entries(obj)) {
