@@ -116,42 +116,41 @@ export async function uploadFloorPlan(opts: {
   const newShapeKeys: string[] = [];
   const matchedKeys = new Set<string>();
 
-  const floorPlan = await prisma.$transaction(async (tx) => {
-    if (previous) {
-      await tx.floorPlan.update({
-        where: { id: previous.id },
-        data: { active: false },
-      });
-    }
+  const floorPlan = await prisma.$transaction(
+    async (tx) => {
+      if (previous) {
+        await tx.floorPlan.update({
+          where: { id: previous.id },
+          data: { active: false },
+        });
+      }
 
-    const created = await tx.floorPlan.create({
-      data: {
-        zoneId: zone?.id ?? null,
-        systemId: hasZones ? null : system.id,
-        name: opts.target.name || parsed.name,
-        originalFilename: opts.filename,
-        sourceFormat: parsed.format as SourceFormat,
-        storagePath,
-        backgroundAssetPath,
-        viewBox: parsed.viewBox ?? null,
-        canvasWidth: parsed.canvasWidth ?? null,
-        canvasHeight: parsed.canvasHeight ?? null,
-        uploadedById: opts.uploadedById,
-        sourceFileLastUpdated: parsed.sourceFileLastUpdated ?? null,
-        lastRefreshAt: new Date(),
-        active: true,
-        parseWarnings:
-          parsed.warnings.length > 0 ? JSON.stringify(parsed.warnings) : null,
-      },
-    });
-
-    for (const shape of parsed.shapes) {
-      const prior = previousByKey.get(shape.shapeKey);
-      if (prior) matchedKeys.add(shape.shapeKey);
-      else newShapeKeys.push(shape.shapeKey);
-
-      await tx.equipment.create({
+      const created = await tx.floorPlan.create({
         data: {
+          zoneId: zone?.id ?? null,
+          systemId: hasZones ? null : system.id,
+          name: opts.target.name || parsed.name,
+          originalFilename: opts.filename,
+          sourceFormat: parsed.format as SourceFormat,
+          storagePath,
+          backgroundAssetPath,
+          viewBox: parsed.viewBox ?? null,
+          canvasWidth: parsed.canvasWidth ?? null,
+          canvasHeight: parsed.canvasHeight ?? null,
+          uploadedById: opts.uploadedById,
+          sourceFileLastUpdated: parsed.sourceFileLastUpdated ?? null,
+          lastRefreshAt: new Date(),
+          active: true,
+          parseWarnings:
+            parsed.warnings.length > 0 ? JSON.stringify(parsed.warnings) : null,
+        },
+      });
+
+      const equipmentRows = parsed.shapes.map((shape) => {
+        const prior = previousByKey.get(shape.shapeKey);
+        if (prior) matchedKeys.add(shape.shapeKey);
+        else newShapeKeys.push(shape.shapeKey);
+        return {
           floorPlanId: created.id,
           shapeKey: shape.shapeKey,
           shapeType: shape.shapeType,
@@ -169,49 +168,57 @@ export async function uploadFloorPlan(opts: {
           scheduleActivity: prior?.scheduleActivity ?? null,
           currentStatusOptionId: prior?.currentStatusOptionId ?? defaultStatusId,
           updatedById: opts.uploadedById,
-        },
+        };
       });
-    }
 
-    // Seed history for brand-new equipment only
-    const createdEquipment = await tx.equipment.findMany({
-      where: { floorPlanId: created.id },
-      select: { id: true, shapeKey: true, currentStatusOptionId: true },
-    });
+      const chunkSize = 500;
+      for (let i = 0; i < equipmentRows.length; i += chunkSize) {
+        await tx.equipment.createMany({ data: equipmentRows.slice(i, i + chunkSize) });
+      }
 
-    for (const eq of createdEquipment) {
-      if (!previousByKey.has(eq.shapeKey)) {
-        await tx.statusHistory.create({
-          data: {
-            equipmentId: eq.id,
-            statusOptionId: eq.currentStatusOptionId,
-            changedById: opts.uploadedById,
-            note: "Initial status on upload",
-          },
-        });
-      } else {
-        // Carry forward history conceptually by copying recent history rows
-        const prior = previousByKey.get(eq.shapeKey)!;
-        const hist = await tx.statusHistory.findMany({
-          where: { equipmentId: prior.id },
-          orderBy: { changedAt: "asc" },
-        });
-        for (const h of hist) {
-          await tx.statusHistory.create({
-            data: {
+      const createdEquipment = await tx.equipment.findMany({
+        where: { floorPlanId: created.id },
+        select: { id: true, shapeKey: true, currentStatusOptionId: true },
+      });
+
+      const initialHistory = createdEquipment
+        .filter((eq) => !previousByKey.has(eq.shapeKey))
+        .map((eq) => ({
+          equipmentId: eq.id,
+          statusOptionId: eq.currentStatusOptionId,
+          changedById: opts.uploadedById,
+          note: "Initial status on upload",
+        }));
+
+      for (let i = 0; i < initialHistory.length; i += chunkSize) {
+        await tx.statusHistory.createMany({ data: initialHistory.slice(i, i + chunkSize) });
+      }
+
+      if (previous) {
+        for (const eq of createdEquipment) {
+          const prior = previousByKey.get(eq.shapeKey);
+          if (!prior) continue;
+          const hist = await tx.statusHistory.findMany({
+            where: { equipmentId: prior.id },
+            orderBy: { changedAt: "asc" },
+          });
+          if (hist.length === 0) continue;
+          await tx.statusHistory.createMany({
+            data: hist.map((h) => ({
               equipmentId: eq.id,
               statusOptionId: h.statusOptionId,
               changedById: h.changedById,
               changedAt: h.changedAt,
               note: h.note,
-            },
+            })),
           });
         }
       }
-    }
 
-    return created;
-  });
+      return created;
+    },
+    { timeout: 600_000, maxWait: 60_000 }
+  );
 
   const missingShapes = [...previousByKey.keys()].filter((k) => !matchedKeys.has(k) && !parsed.shapes.some((s) => s.shapeKey === k));
 

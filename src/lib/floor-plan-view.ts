@@ -2,6 +2,7 @@ import { getFileStorage } from "@/lib/storage";
 import { parseFloorPlanFile } from "@/lib/parsers";
 import { prisma } from "@/lib/db";
 import type { FloorPlanEquipment } from "@/components/FloorPlanCanvas";
+import { placeholderRojDate, SAMPLE_SUBMITTAL_URL } from "@/lib/format";
 
 export async function loadFloorPlanBackground(storagePath: string, originalFilename: string) {
   const storage = getFileStorage();
@@ -90,6 +91,8 @@ export async function getFloorPlanViewerData(floorPlanId: string) {
     },
     updatedAt: eq.updatedAt.toISOString(),
     updatedByName: eq.updatedBy?.name ?? null,
+    rojDate: placeholderRojDate(eq.id),
+    submittalUrl: SAMPLE_SUBMITTAL_URL,
   }));
 
   const mappingEquipment = floorPlan.equipment.map((eq) => ({
