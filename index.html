@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'none'; object-src 'none'" />
 <title>Ryan Field equipment tracker</title>
 <style>
   :root {
@@ -147,52 +148,116 @@ function visible(item) {
   if (statusFilter !== "all" && statusMap[item.id] !== statusFilter) return false;
   return true;
 }
+function el(tag, text, className) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
 function renderChrome() {
   const zones = [...new Set(items.map((i) => i.zone))];
   const zoneBox = document.getElementById("zones");
-  zoneBox.innerHTML = "";
+  zoneBox.replaceChildren();
   [["all", "All areas"], ...zones.map((z) => [z, z])].forEach(([id, label]) => {
-    const b = document.createElement("button");
+    const b = el("button", label, "chip" + (zone === id ? " on" : ""));
     b.type = "button";
-    b.className = "chip" + (zone === id ? " on" : "");
-    b.textContent = label;
     b.onclick = () => { zone = id; render(); };
     zoneBox.appendChild(b);
   });
   const equip = document.getElementById("equip");
   const prev = nameFilter;
-  equip.innerHTML = '<option value="all">All</option>' + items.map((i) => `<option value="${i.id}">${i.name} · ${i.zone}</option>`).join("");
+  equip.replaceChildren();
+  const allOpt = el("option", "All");
+  allOpt.value = "all";
+  equip.appendChild(allOpt);
+  items.forEach((i) => {
+    const o = el("option", i.name + " · " + i.zone);
+    o.value = i.id;
+    equip.appendChild(o);
+  });
   equip.value = prev;
   const status = document.getElementById("status");
   if (!status.dataset.ready) {
-    status.innerHTML = '<option value="all">All</option>' + STATUSES.map((s) => `<option value="${s.id}">${s.label}</option>`).join("");
+    status.replaceChildren();
+    const allStatus = el("option", "All");
+    allStatus.value = "all";
+    status.appendChild(allStatus);
+    STATUSES.forEach((s) => {
+      const o = el("option", s.label);
+      o.value = s.id;
+      status.appendChild(o);
+    });
     status.dataset.ready = "1";
     status.onchange = () => { statusFilter = status.value; render(); };
     equip.onchange = () => { nameFilter = equip.value; render(); };
   }
   status.value = statusFilter;
   const key = document.getElementById("key");
-  key.innerHTML = STATUSES.map((s) => `<span><span class="swatch" style="background:${s.color}"></span>${s.label}</span>`).join("") +
-    '<span style="color:var(--muted)">Click a marker to set status. Scroll zooms the plan only.</span>';
+  key.replaceChildren();
+  STATUSES.forEach((s) => {
+    const span = el("span");
+    const sw = el("span", "", "swatch");
+    sw.style.background = s.color;
+    span.append(sw, document.createTextNode(s.label));
+    key.appendChild(span);
+  });
+  const hint = el("span", "Click a marker to set status. Scroll zooms the plan only.");
+  hint.style.color = "var(--muted)";
+  key.appendChild(hint);
 }
 function renderCharts() {
   const box = document.getElementById("charts");
   const cats = [...new Set(items.map((i) => i.category))];
-  box.innerHTML = cats.map((cat) => {
+  box.replaceChildren();
+  cats.forEach((cat) => {
     const group = items.filter((i) => i.category === cat);
     const counts = STATUSES.map((s) => group.filter((i) => statusMap[i.id] === s.id).length);
     const total = group.length || 1;
+    const article = el("article", null, "card chart");
+    const h2 = el("h2", cat);
+    const wrap = el("div", null, "donut-wrap");
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", "108");
+    svg.setAttribute("height", "108");
+    svg.setAttribute("viewBox", "0 0 108 108");
     let offset = 0;
     const r = 42, c = 2 * Math.PI * r;
-    const rings = STATUSES.map((s, idx) => {
+    STATUSES.forEach((s, idx) => {
       const len = (counts[idx] / total) * c;
-      const el = `<circle cx="54" cy="54" r="${r}" fill="none" stroke="${s.color}" stroke-width="16" stroke-dasharray="${len} ${c - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 54 54)" />`;
+      const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      ring.setAttribute("cx", "54");
+      ring.setAttribute("cy", "54");
+      ring.setAttribute("r", String(r));
+      ring.setAttribute("fill", "none");
+      ring.setAttribute("stroke", s.color);
+      ring.setAttribute("stroke-width", "16");
+      ring.setAttribute("stroke-dasharray", len + " " + (c - len));
+      ring.setAttribute("stroke-dashoffset", String(-offset));
+      ring.setAttribute("transform", "rotate(-90 54 54)");
+      svg.appendChild(ring);
       offset += len;
-      return el;
-    }).join("");
-    const legend = STATUSES.map((s, idx) => `<div><span class="swatch" style="background:${s.color}"></span>${s.label} ${counts[idx]}</div>`).join("");
-    return `<article class="card chart"><h2>${cat}</h2><div class="donut-wrap"><svg width="108" height="108" viewBox="0 0 108 108">${rings}<text x="54" y="58" text-anchor="middle" font-size="16" font-weight="800" fill="#061433">${group.length}</text></svg><div class="legend">${legend}</div></div></article>`;
-  }).join("");
+    });
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", "54");
+    label.setAttribute("y", "58");
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("font-size", "16");
+    label.setAttribute("font-weight", "800");
+    label.setAttribute("fill", "#061433");
+    label.textContent = String(group.length);
+    svg.appendChild(label);
+    const legend = el("div", null, "legend");
+    STATUSES.forEach((s, idx) => {
+      const row = el("div");
+      const sw = el("span", "", "swatch");
+      sw.style.background = s.color;
+      row.append(sw, document.createTextNode(s.label + " " + counts[idx]));
+      legend.appendChild(row);
+    });
+    wrap.append(svg, legend);
+    article.append(h2, wrap);
+    box.appendChild(article);
+  });
 }
 function renderMarkers() {
   const sheet = document.getElementById("sheet");
@@ -224,10 +289,15 @@ function renderMarkers() {
 function renderDetail() {
   const box = document.getElementById("detail");
   const item = items.find((i) => i.id === selectedId);
-  if (!item) { box.classList.add("hidden"); return; }
+  if (!item) { box.classList.add("hidden"); box.replaceChildren(); return; }
   const status = statusById(statusMap[item.id] || "pending");
   box.classList.remove("hidden");
-  box.innerHTML = `<h3>${item.name}</h3><p>${item.category} · ${item.zone} · ${item.tag}</p><p style="color:var(--navy);font-weight:700">${status.label}</p>`;
+  const title = el("h3", item.name);
+  const meta = el("p", item.category + " · " + item.zone + " · " + item.tag);
+  const state = el("p", status.label);
+  state.style.color = "var(--navy)";
+  state.style.fontWeight = "700";
+  box.replaceChildren(title, meta, state);
 }
 function render() {
   const shown = items.filter(visible);
@@ -255,16 +325,21 @@ function openMenu(id, x, y) {
   menu.classList.remove("hidden");
   menu.style.left = Math.min(x, window.innerWidth - 220) + "px";
   menu.style.top = Math.min(y, window.innerHeight - 220) + "px";
-  menu.innerHTML = '<div class="cap">Set status</div>' + STATUSES.map((s) =>
-    `<button type="button" data-status="${s.id}"><span class="swatch" style="background:${s.color}"></span>${s.label}</button>`
-  ).join("");
-  menu.querySelectorAll("button").forEach((btn) => {
+  menu.replaceChildren(el("div", "Set status", "cap"));
+  STATUSES.forEach((s) => {
+    const btn = el("button");
+    btn.type = "button";
+    const sw = el("span", "", "swatch");
+    sw.style.background = s.color;
+    btn.append(sw, document.createTextNode(s.label));
     btn.onclick = () => {
-      statusMap[id] = btn.dataset.status;
+      if (!STATUSES.some((row) => row.id === s.id)) return;
+      statusMap[id] = s.id;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(statusMap));
       menu.classList.add("hidden");
       render();
     };
+    menu.appendChild(btn);
   });
 }
 document.getElementById("plan").width = DATA.width;
