@@ -1,9 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { PlanSelect } from "@/components/PlanSelect";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
+import { isVisibleSystem } from "@/lib/systems";
+
+const SYSTEM_TINT: Record<string, string> = {
+  MES_FCM: "from-[#0b2a5b] to-[#3a6fd6]",
+  TWMS: "from-[#0b2a5b] to-[#1ea7a0]",
+  HAC: "from-[#0b2a5b] to-[#d414c8]",
+  ELECTRICAL_YARD: "from-[#0b2a5b] to-[#f0b429]",
+  MECHANICAL_YARD: "from-[#0b2a5b] to-[#1f8a4c]",
+};
 
 export default async function BuildingPage({
   params,
@@ -35,7 +45,8 @@ export default async function BuildingPage({
   });
   if (!building) notFound();
 
-  const plans = building.systems.flatMap((sys) => {
+  const visibleSystems = building.systems.filter((sys) => isVisibleSystem(sys.systemType));
+  const plans = visibleSystems.flatMap((sys) => {
     const zonePlans = sys.zones.flatMap((z) =>
       z.floorPlans.map((fp) => ({
         id: fp.id,
@@ -59,19 +70,33 @@ export default async function BuildingPage({
         user={{ name: user.name, role: user.role }}
       />
       <main className="flex-1 space-y-6 p-4 sm:p-6">
-        <PlanSelect plans={plans} />
+        <div className="dash-card p-4">
+          <PlanSelect plans={plans} />
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {building.systems.map((sys) => (
-            <Link
-              key={sys.id}
-              href={`/systems/${sys.id}`}
-              className="rounded-xl bg-[var(--card-bg)] p-5 transition hover:bg-[var(--card-bg-soft)]"
-            >
-              <div className="text-lg font-bold text-[var(--navy)]">{sys.displayName}</div>
-              <div className="mt-1 text-sm text-[var(--accent)]">{sys.systemType}</div>
-            </Link>
-          ))}
+          {visibleSystems.map((sys) => {
+            const planCount =
+              sys.floorPlans.length + sys.zones.reduce((n, z) => n + z.floorPlans.length, 0);
+            return (
+              <Link
+                key={sys.id}
+                href={`/systems/${sys.id}`}
+                className="dash-card group overflow-hidden transition hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className={`h-1.5 bg-gradient-to-r ${SYSTEM_TINT[sys.systemType] || "from-[var(--navy)] to-[var(--accent)]"}`} />
+                <div className="flex items-start justify-between gap-3 p-5">
+                  <div>
+                    <div className="text-lg font-bold text-[var(--navy)]">{sys.displayName}</div>
+                    <div className="mt-1 text-sm text-[var(--muted)]">
+                      {planCount} floor plan{planCount === 1 ? "" : "s"}
+                    </div>
+                  </div>
+                  <ChevronRight className="mt-1 h-5 w-5 text-[var(--muted)] group-hover:text-[var(--accent)]" />
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </main>
     </div>

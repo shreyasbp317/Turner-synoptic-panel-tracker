@@ -29,53 +29,54 @@ export function AppHeader({
   user,
 }: AppHeaderProps) {
   return (
-    <header className="border-b border-[#d0d0d0] bg-white px-4 py-3 sm:px-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
+    <header className="sticky top-0 z-30 bg-[var(--navy)] px-4 py-2.5 text-white shadow-lg shadow-[var(--navy)]/20 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           {backHref ? (
             <Link
               href={backHref}
-              className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#0B2A5B]/30 bg-[#F0F0F0] text-[var(--navy)] hover:bg-[#E0E0E0]"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20"
               aria-label="Back"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
           ) : null}
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--navy)] sm:text-3xl">
-              <Link href="/" className="hover:underline">
+            <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl">
+              <Link href="/" className="hover:opacity-90">
                 {title}
               </Link>
             </h1>
-            <p className="mt-0.5 text-base font-semibold text-[var(--accent)] sm:text-lg">
+            <p className="text-sm font-semibold text-[var(--accent-soft)] sm:text-base">
               {subtitle}
             </p>
           </div>
         </div>
 
         {user ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 text-sm text-[var(--navy)]">
+          <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
             <nav className="flex flex-wrap items-center gap-2" aria-label="App">
               <Link
                 href="/users"
-                className="rounded-md border border-[#0B2A5B]/25 bg-[#F0F0F0] px-3 py-1.5 text-sm font-medium hover:bg-[#E0E0E0]"
+                className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 font-medium hover:bg-white/20"
               >
                 Users
               </Link>
               <Link
                 href="/admin/status-sets"
-                className="rounded-md border border-[#0B2A5B]/25 bg-[#F0F0F0] px-3 py-1.5 text-sm font-medium hover:bg-[#E0E0E0]"
+                className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 font-medium hover:bg-white/20"
               >
                 Status sets
               </Link>
             </nav>
-            <div className="text-right">
-              <div className="font-medium">{user.name}</div>
+            <div className="px-1 text-right text-white/80">
+              <div className="font-semibold text-white">{user.name}</div>
+              <div className="text-[11px] uppercase tracking-wide text-white/50">{user.role}</div>
             </div>
             <form action="/api/auth/logout" method="post">
               <button
                 type="submit"
-                className="rounded-md border border-[#0B2A5B]/25 bg-[#F0F0F0] px-3 py-1.5 text-sm font-medium hover:bg-[#E0E0E0]"
+                className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[var(--accent-soft)]"
               >
                 Logout
               </button>
@@ -92,8 +93,8 @@ export function AppHeader({
               href={z.href}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 z.active
-                  ? "bg-[var(--navy)] text-white"
-                  : "bg-[#D8DEE8] text-[var(--navy)] hover:bg-[#C8D0DC]"
+                  ? "bg-white text-[var(--navy)] shadow-sm"
+                  : "bg-white/10 text-white/85 hover:bg-white/20"
               }`}
             >
               {z.name}

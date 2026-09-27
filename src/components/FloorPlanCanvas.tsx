@@ -9,7 +9,6 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 import { ChevronDown, Minus, Pencil, Plus, X } from "lucide-react";
 import { formatUiDate } from "@/lib/format";
@@ -132,14 +131,15 @@ function ShapeElement({
   onPointerLeave: () => void;
   onContextMenu: (e: ReactMouseEvent<SVGElement>) => void;
 }) {
+  const unscoped = eq.layer === "background";
   const unmapped = !eq.equipmentTag;
-  const colourless = dimmed;
-  const fill = colourless ? "none" : eq.currentStatus.colorHex;
-  const opacity = colourless ? 0 : 0.55;
+  const colourless = dimmed || unscoped;
+  const fill = colourless ? (unscoped ? "#ffffff" : "none") : eq.currentStatus.colorHex;
+  const opacity = colourless ? (unscoped ? 0.82 : 0) : 0.62;
   const stroke = colourless
     ? "none"
     : selected
-      ? "#0B2A5B"
+      ? "#061433"
       : unmapped
         ? "#666666"
         : eq.currentStatus.colorHex;
@@ -365,11 +365,25 @@ export function FloorPlanCanvas({
     });
   }, []);
 
-  const onWheel = (e: ReactWheelEvent) => {
-    e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-    zoomBy(factor, e.clientX, e.clientY);
-  };
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheelNative = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      zoomBy(factor, e.clientX, e.clientY);
+    };
+    const preventGesture = (e: Event) => e.preventDefault();
+    el.addEventListener("wheel", onWheelNative, { passive: false });
+    el.addEventListener("gesturestart", preventGesture);
+    el.addEventListener("gesturechange", preventGesture);
+    return () => {
+      el.removeEventListener("wheel", onWheelNative);
+      el.removeEventListener("gesturestart", preventGesture);
+      el.removeEventListener("gesturechange", preventGesture);
+    };
+  }, [zoomBy]);
 
   const openContextMenu = (equipmentId: string, clientX: number, clientY: number) => {
     setContextMenu({ x: clientX, y: clientY, equipmentId });
@@ -502,7 +516,7 @@ export function FloorPlanCanvas({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative overflow-hidden rounded-lg border border-[#d0d0d0] bg-[#FAFAFA]">
+      <div className="dash-card relative overflow-hidden">
         <div className="absolute left-2 top-2 z-20 flex gap-1">
           <button
             type="button"
@@ -567,8 +581,7 @@ export function FloorPlanCanvas({
 
         <div
           ref={containerRef}
-          className="h-[min(70vh,640px)] w-full touch-none overflow-hidden"
-          onWheel={onWheel}
+          className="plan-canvas h-[min(78vh,820px)] w-full touch-none overflow-hidden overscroll-none"
           onPointerDown={onContainerPointerDown}
           onPointerMove={onContainerPointerMove}
           onPointerUp={onContainerPointerUp}
@@ -636,8 +649,11 @@ export function FloorPlanCanvas({
             style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
           >
             <div className="font-semibold">
-              {tooltip.equipment.equipmentTag || tooltip.equipment.equipmentName || tooltip.equipment.shapeKey}
+              {tooltip.equipment.equipmentName || tooltip.equipment.equipmentTag || tooltip.equipment.shapeKey}
             </div>
+            {tooltip.equipment.equipmentName && tooltip.equipment.equipmentTag ? (
+              <div className="mt-0.5 text-white/70">{tooltip.equipment.equipmentTag}</div>
+            ) : null}
             {!tooltip.equipment.equipmentTag ? (
               <div className="mt-0.5 italic text-amber-300">unmapped</div>
             ) : null}
@@ -692,7 +708,7 @@ export function FloorPlanCanvas({
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg bg-[var(--card-bg)] px-4 py-2.5">
+      <div className="dash-card flex flex-wrap items-center gap-3 px-4 py-2.5">
         <span className="text-xs font-semibold uppercase tracking-wide text-[#666]">Legend</span>
         {sortedStatuses.map((opt) => (
           <span key={opt.id} className="flex items-center gap-1.5 text-sm text-[#333]">
@@ -722,7 +738,7 @@ export function FloorPlanCanvas({
           <div className="mb-3 flex items-start justify-between gap-2">
             <div>
               <h3 className="text-lg font-bold text-[var(--navy)]">
-                {selected.equipmentTag || selected.equipmentName || selected.shapeKey}
+                {selected.equipmentName || selected.equipmentTag || selected.shapeKey}
               </h3>
               {!selected.equipmentTag ? (
                 <span className="text-xs font-medium uppercase tracking-wide text-amber-700">

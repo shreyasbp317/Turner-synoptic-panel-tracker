@@ -91,7 +91,7 @@ export async function getFloorPlanViewerData(floorPlanId: string) {
     },
     updatedAt: eq.updatedAt.toISOString(),
     updatedByName: eq.updatedBy?.name ?? null,
-    rojDate: placeholderRojDate(eq.id),
+    rojDate: eq.rojDate?.toISOString() ?? placeholderRojDate(eq.id),
     submittalUrl: SAMPLE_SUBMITTAL_URL,
   }));
 

@@ -21,7 +21,7 @@ export function PlanSelect({
         Floor plan
       </span>
       <select
-        className="w-full rounded-md border border-[#ccc] bg-white px-3 py-2"
+        className="w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2.5"
         value={currentId || ""}
         onChange={(e) => {
           if (e.target.value) router.push(`/floor-plans/${e.target.value}`);

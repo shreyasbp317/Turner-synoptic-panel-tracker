@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
 export function LoginForm() {
   const router = useRouter();
@@ -34,47 +34,49 @@ export function LoginForm() {
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="w-full max-w-sm rounded-xl bg-[var(--card-bg)] p-6 shadow-sm"
-    >
-      <h1 className="text-2xl font-bold text-[var(--navy)]">RPL-10X</h1>
-      <p className="mt-1 text-sm font-medium text-[var(--accent)]">Sign in to continue</p>
+    <form onSubmit={onSubmit} className="w-full max-w-md space-y-5">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-soft)]">
+          Equipment tracker
+        </p>
+        <h1 className="mt-1 text-4xl font-extrabold tracking-tight text-white">RPL-10X</h1>
+        <p className="mt-2 text-sm text-white/70">Sign in to continue to the synoptic dashboard.</p>
+      </div>
 
-      <label className="mt-6 block text-sm">
-        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#666]">
+      <label className="block text-sm">
+        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-white/60">
           Email
         </span>
         <input
           type="email"
           required
           autoComplete="username"
-          className="w-full rounded-md border border-[#ccc] bg-white px-3 py-2"
+          className="w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-white outline-none placeholder:text-white/30 focus:border-[var(--accent-soft)]"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
       </label>
 
-      <label className="mt-4 block text-sm">
-        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#666]">
+      <label className="block text-sm">
+        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-white/60">
           Password
         </span>
         <input
           type="password"
           required
           autoComplete="current-password"
-          className="w-full rounded-md border border-[#ccc] bg-white px-3 py-2"
+          className="w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-white outline-none focus:border-[var(--accent-soft)]"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
       </label>
 
-      {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="text-sm text-rose-300">{error}</p> : null}
 
       <button
         type="submit"
         disabled={loading}
-        className="mt-6 w-full rounded-md bg-[var(--navy)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+        className="w-full rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white hover:bg-[var(--accent-soft)] disabled:opacity-60"
       >
         {loading ? "Signing in…" : "Sign in"}
       </button>

@@ -115,6 +115,7 @@ model Equipment {
   notes                String?
   scheduleId           String?          @map("schedule_id")
   scheduleActivity     String?          @map("schedule_activity")
+  rojDate              DateTime?       @map("roj_date")
   currentStatusOptionId String          @map("current_status_option_id")
   currentStatusOption  StatusSetOption  @relation(fields: [currentStatusOptionId], references: [id])
   updatedById          String?          @map("updated_by")

@@ -33,8 +33,7 @@ const SYSTEMS: Array<{
   sortOrder: number;
   hasZones: boolean;
 }> = [
-  { systemType: SystemType.MES_FCM, displayName: "MES, TWMS, & FCMs", statusSetKey: "full_delivery_install", sortOrder: 1, hasZones: true },
-  { systemType: SystemType.TWMS, displayName: "TWMS", statusSetKey: "full_delivery_install", sortOrder: 2, hasZones: true },
+  { systemType: SystemType.MES_FCM, displayName: "MES & FCMs", statusSetKey: "full_delivery_install", sortOrder: 1, hasZones: true },
   { systemType: SystemType.HAC, displayName: "HACs", statusSetKey: "hac_delivery_install", sortOrder: 3, hasZones: true },
   { systemType: SystemType.ELECTRICAL_YARD, displayName: "Electrical", statusSetKey: "yard_status", sortOrder: 4, hasZones: false },
   { systemType: SystemType.MECHANICAL_YARD, displayName: "Mechanical Yard", statusSetKey: "yard_status", sortOrder: 5, hasZones: false },
